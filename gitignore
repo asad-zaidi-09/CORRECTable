@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Environment variables (never commit API keys!)
+.env
+*.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Dataset files (large, don't commit images to Git)
+*.jpg
+*.jpeg
+*.png
+*.mp4
+clean_dataset/
+blurry_images/
+exact_duplicates/
+split_dataset/
