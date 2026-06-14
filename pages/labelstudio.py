@@ -7,9 +7,7 @@ Flow:
   1. User connects to Label Studio (URL + API key)
   2. User pastes dataset folder path (runs clean analysis)
   3. User sets number of labelers + names + image allocations
-  4. User can either:
-     a. Export split folders to Desktop
-     b. Push each labeler's images directly to Label Studio as separate projects
+  4. Push each labeler's images directly to Label Studio as separate projects
 """
 
 import os
@@ -20,7 +18,7 @@ import requests
 import streamlit as st
 
 from utils.image_utils import SUPPORTED, analyze_folder
-from utils.ls_api import ls_test_connection, ls_create_project, normalize_ls_url
+from utils.ls_api import ls_test_connection, ls_create_project
 
 DESKTOP = os.path.join(os.path.expanduser("~"), "OneDrive", "Desktop")
 
@@ -33,7 +31,7 @@ SEGMENT_COLORS = [
 def render():
     st.markdown('<div class="page-content">', unsafe_allow_html=True)
 
-    # ── Label Studio Connection ──────────────────────────────────────────────
+    # ── Label Studio Connection ───────────────────────────────────────────────
     st.markdown('<div class="section-label">Label Studio Connection</div>', unsafe_allow_html=True)
     st.markdown('<div class="ls-config-box">', unsafe_allow_html=True)
 
@@ -74,7 +72,7 @@ def render():
         )
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── Dataset Path ─────────────────────────────────────────────────────────
+    # ── Dataset Path ──────────────────────────────────────────────────────────
     st.divider()
     st.markdown('<div class="section-label">Dataset Path</div>', unsafe_allow_html=True)
     raw_path = st.text_input(
@@ -100,7 +98,6 @@ def render():
         st.markdown('</div>', unsafe_allow_html=True)
         return
 
-    # Reuse analysis from Clean page if same folder, otherwise re-run
     if st.session_state.get("analyzed_path") != folder_path:
         st.markdown('<div class="section-label">Analyzing</div>', unsafe_allow_html=True)
         prog_bar = st.progress(0)
@@ -121,7 +118,7 @@ def render():
 
     st.success(f"{total_clean} clean images ready.")
 
-    # ── Split Configuration ──────────────────────────────────────────────────
+    # ── Split Configuration ───────────────────────────────────────────────────
     st.divider()
     st.markdown('<div class="section-label">Split & Push</div>', unsafe_allow_html=True)
     st.write("")
@@ -139,7 +136,6 @@ def render():
     n = int(num_labelers)
     alloc_key = f"allocations_{n}_{total_clean}"
 
-    # Auto-distribute evenly on first load
     if alloc_key not in st.session_state:
         base, rem = divmod(total_clean, n)
         st.session_state[alloc_key] = [base + (1 if i < rem else 0) for i in range(n)]
@@ -147,7 +143,6 @@ def render():
 
     alloc = st.session_state[alloc_key]
 
-    # Labeler names
     st.write("")
     st.markdown('<div class="section-label" style="margin-bottom:4px;">Labeler Names</div>', unsafe_allow_html=True)
     name_cols = st.columns(n)
@@ -155,15 +150,12 @@ def render():
     for i in range(n):
         with name_cols[i]:
             lname = st.text_input(
-                "",
-                value=st.session_state.get(f"lname_{i}", f"Labeler {i+1}"),
-                key=f"lname_input_{i}",
-                placeholder=f"Labeler {i+1}",
+                "", value=st.session_state.get(f"lname_{i}", f"Labeler {i+1}"),
+                key=f"lname_input_{i}", placeholder=f"Labeler {i+1}",
                 label_visibility="collapsed",
             )
             labeler_names.append(lname.strip() or f"Labeler {i+1}")
 
-    # Allocation numbers
     st.write("")
     st.markdown('<div class="section-label" style="margin-bottom:4px;">Allocations</div>', unsafe_allow_html=True)
     alloc_cols = st.columns(n)
@@ -188,9 +180,7 @@ def render():
                 changed_idx = i
             new_alloc[i] = val
 
-    # Auto-balance when one labeler's count changes
     if changed_idx is not None:
-        diff = sum(new_alloc) - total_clean
         target = n - 1 if changed_idx != n - 1 else n - 2
         remaining = total_clean - sum(new_alloc[j] for j in range(n) if j != target)
         new_alloc[target] = max(0, remaining)
@@ -199,9 +189,7 @@ def render():
 
     total_assigned = sum(alloc)
 
-    # Visual allocation bar
-    bar_segments = ""
-    cursor = 0
+    bar_segments, cursor = "", 0
     for i, count in enumerate(alloc):
         pct = (count / total_clean * 100) if total_clean > 0 else 0
         color = SEGMENT_COLORS[i % len(SEGMENT_COLORS)]
@@ -215,8 +203,7 @@ def render():
         cursor += pct
 
     alloc_warning = (
-        f'<div style="color:var(--gold);font-size:0.7rem;margin-top:8px;font-family:Inter,sans-serif;">'
-        f'Assigned {total_assigned} / {total_clean} — adjust to match total.</div>'
+        f'<div style="color:var(--gold);font-size:0.7rem;margin-top:8px;">Assigned {total_assigned} / {total_clean} — adjust to match total.</div>'
         if total_assigned != total_clean else ""
     )
     chips = "".join([
@@ -233,7 +220,7 @@ def render():
         <div style="display:flex;gap:8px;flex-wrap:wrap;">{chips}</div>{alloc_warning}
     </div>""", unsafe_allow_html=True)
 
-    # ── Action Buttons ───────────────────────────────────────────────────────
+    # ── Action Buttons ────────────────────────────────────────────────────────
     st.write("")
     btn_col1, btn_col2 = st.columns(2)
 
@@ -262,7 +249,7 @@ def render():
                         copied += 1
                         prog.progress(copied / total_clean)
                 cap.empty()
-                st.success(f"Done. {total_clean} images split into {n} folders.")
+                st.success(f"Done. {total_clean} images split into {n} folders on Desktop.")
 
     with btn_col2:
         if st.button("Push to Label Studio", key="btn_push_ls"):
@@ -301,8 +288,7 @@ def render():
                         overall_prog.progress(cursor_i / total_clean)
                         continue
 
-                    uploaded_count = 0
-                    errors = []
+                    uploaded_count, errors = 0, []
                     for j, fname in enumerate(chunk):
                         img_path = os.path.join(folder_path, fname)
                         ext = fname.lower().rsplit(".", 1)[-1]
@@ -329,22 +315,19 @@ def render():
                         )
 
                     total_uploaded += uploaded_count
-                    if errors:
-                        results_log.append(("warn", f"{lname}: {uploaded_count}/{count} uploaded — project #{project_id} ({len(errors)} errors)"))
-                    else:
-                        results_log.append(("ok", f"{lname}: {uploaded_count}/{count} uploaded — project #{project_id}"))
+                    tag = "warn" if errors else "ok"
+                    msg = f"{lname}: {uploaded_count}/{count} uploaded — project #{project_id}"
+                    if errors: msg += f" ({len(errors)} errors)"
+                    results_log.append((tag, msg))
 
                 overall_prog.progress(1.0)
                 status_text.empty()
                 st.divider()
                 st.markdown('<div class="section-label">Upload Results</div>', unsafe_allow_html=True)
                 for kind, line in results_log:
-                    if kind == "ok":
-                        st.success(line)
-                    elif kind == "warn":
-                        st.warning(line)
-                    else:
-                        st.error(line)
+                    if kind == "ok":     st.success(line)
+                    elif kind == "warn": st.warning(line)
+                    else:                st.error(line)
                 if all_ok:
                     st.success(f"All done. {total_uploaded} images pushed to {n} Label Studio projects.")
 

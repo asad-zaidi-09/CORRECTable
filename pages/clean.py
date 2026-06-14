@@ -24,10 +24,7 @@ from utils.image_utils import (
 DESKTOP = os.path.join(os.path.expanduser("~"), "OneDrive", "Desktop")
 
 
-# ── Small HTML helpers ──────────────────────────────────────────────────────
-
 def _render_image_rows(items, tag_type, meta_label, folder_path):
-    """Builds HTML for the small image preview rows inside the option boxes."""
     rows_html = ""
     for name, meta in items:
         filepath = os.path.join(folder_path, name)
@@ -53,7 +50,6 @@ def _render_image_rows(items, tag_type, meta_label, folder_path):
 
 
 def _render_previews(items, folder_path, meta_label):
-    """Renders expandable full-size image previews using Streamlit expanders."""
     for name, meta in items:
         short = name if len(name) <= 38 else name[:35] + "..."
         with st.expander(short):
@@ -65,7 +61,6 @@ def _render_previews(items, folder_path, meta_label):
 
 
 def _export_with_progress(files, src_folder, dst_folder, label="Exporting"):
-    """Copies a list of files to dst_folder with a progress bar."""
     os.makedirs(dst_folder, exist_ok=True)
     prog = st.progress(0)
     cap = st.caption(f"{label}...")
@@ -74,8 +69,6 @@ def _export_with_progress(files, src_folder, dst_folder, label="Exporting"):
         prog.progress((i + 1) / len(files))
     cap.empty()
 
-
-# ── Main render function ────────────────────────────────────────────────────
 
 def render():
     st.markdown('<div class="page-content">', unsafe_allow_html=True)
@@ -106,12 +99,10 @@ def render():
 
     st.success(f"{len(all_images)} images found.")
 
-    # ── Run analysis (cached in session_state to avoid re-running on every widget change) ──
     if st.session_state.get("analyzed_path") != folder_path:
         st.divider()
         st.markdown('<div class="section-label">Analyzing</div>', unsafe_allow_html=True)
         prog_bar = st.progress(0)
-
         exact_duplicates, blurry_images = analyze_folder(
             folder_path, all_images,
             progress_callback=lambda p: prog_bar.progress(p)
@@ -123,11 +114,9 @@ def render():
         exact_duplicates = st.session_state.exact_duplicates
         blurry_images = st.session_state.blurry_images
 
-    # Images that are neither duplicate nor blurry
     clean_skip = set([d[0] for d in exact_duplicates] + [b[0] for b in blurry_images])
     clean_images = [f for f in all_images if f not in clean_skip]
 
-    # ── Metrics ──
     st.divider()
     st.markdown('<div class="section-label">Results</div>', unsafe_allow_html=True)
     m1, m2, m3 = st.columns(3)
@@ -138,7 +127,6 @@ def render():
     with m3:
         st.markdown(f'<div class="metric-box"><div class="metric-number">{len(blurry_images)}</div><div class="metric-label">Blurry Images</div></div>', unsafe_allow_html=True)
 
-    # ── Export columns ──
     st.divider()
     st.markdown('<div class="section-label">Export Options</div>', unsafe_allow_html=True)
     st.write("")
@@ -157,7 +145,7 @@ def render():
                 st.error("All images were flagged.")
             else:
                 _export_with_progress(clean_images, folder_path, os.path.join(DESKTOP, "clean_dataset"))
-                st.success(f"Done. {len(clean_images)} images saved.")
+                st.success(f"Done. {len(clean_images)} images saved to Desktop.")
 
     with col2:
         no_blurry = '<div class="img-row" style="justify-content:center;"><div style="text-align:center;color:var(--text2);font-size:0.72rem;padding:16px 0;">No blurry images found.</div></div>'
@@ -175,7 +163,7 @@ def render():
                 st.error("Nothing to export.")
             else:
                 _export_with_progress([n for n, _ in blurry_images], folder_path, os.path.join(DESKTOP, "blurry_images"))
-                st.success(f"Done. {len(blurry_images)} images saved.")
+                st.success(f"Done. {len(blurry_images)} images saved to Desktop.")
 
     with col3:
         no_dups = '<div class="img-row" style="justify-content:center;"><div style="text-align:center;color:var(--text2);font-size:0.72rem;padding:16px 0;">No exact duplicates found.</div></div>'
@@ -193,6 +181,6 @@ def render():
                 st.error("Nothing to export.")
             else:
                 _export_with_progress([n for n, _ in exact_duplicates], folder_path, os.path.join(DESKTOP, "exact_duplicates"))
-                st.success(f"Done. {len(exact_duplicates)} duplicates saved.")
+                st.success(f"Done. {len(exact_duplicates)} duplicates saved to Desktop.")
 
     st.markdown('</div>', unsafe_allow_html=True)
