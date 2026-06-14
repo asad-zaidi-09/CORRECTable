@@ -98,19 +98,19 @@ def render():
         st.markdown('</div>', unsafe_allow_html=True)
         return
 
-    if st.session_state.get("analyzed_path") != folder_path:
+    if st.session_state.get("ls_analyzed_path") != folder_path:
         st.markdown('<div class="section-label">Analyzing</div>', unsafe_allow_html=True)
         prog_bar = st.progress(0)
         exact_duplicates, blurry_images = analyze_folder(
             folder_path, all_images,
             progress_callback=lambda p: prog_bar.progress(p)
         )
-        st.session_state.analyzed_path = folder_path
-        st.session_state.exact_duplicates = exact_duplicates
-        st.session_state.blurry_images = blurry_images
+        st.session_state.ls_analyzed_path = folder_path
+        st.session_state.ls_exact_duplicates = exact_duplicates
+        st.session_state.ls_blurry_images = blurry_images
     else:
-        exact_duplicates = st.session_state.exact_duplicates
-        blurry_images = st.session_state.blurry_images
+        exact_duplicates = st.session_state.ls_exact_duplicates
+        blurry_images = st.session_state.ls_blurry_images
 
     clean_skip = set([d[0] for d in exact_duplicates] + [b[0] for b in blurry_images])
     clean_images = [f for f in all_images if f not in clean_skip]
